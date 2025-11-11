@@ -14,20 +14,17 @@ import { registerSchemaTools } from "./tools/schema.js";
 import { registerSearchTools } from "./tools/search.js";
 import { registerLightningTools } from "./tools/lightning.js";
 import { registerProjectTools } from "./tools/project.js";
-
 const server = new McpServer({
-  name: "perrynet@salesforce-cli-server",
-  version: "2.0.0",
-  description:
-    `Salesforce MCP Server v2.0.0 - Project-based Salesforce automation via CLI integration\n` +
-    `Capabilities: Apex execution, SOQL queries, org management, code testing & coverage\n` +
-    `Authentication: Uses local SF CLI configuration from project .sf directory\n` +
-    `Tools: 38 available (apex, query with raw SOQL + Tooling API, search, sobject, org management, records, code analyzer, scanner, package, schema, lightning, project deployment)`,
-  capabilities: {
-    tools: {},
-  },
+    name: "perrynet@salesforce-cli-server",
+    version: "2.0.0",
+    description: `Salesforce MCP Server v2.0.0 - Project-based Salesforce automation via CLI integration\n` +
+        `Capabilities: Apex execution, SOQL queries, org management, code testing & coverage\n` +
+        `Authentication: Uses local SF CLI configuration from project .sf directory\n` +
+        `Tools: 38 available (apex, query with raw SOQL + Tooling API, search, sobject, org management, records, code analyzer, scanner, package, schema, lightning, project deployment)`,
+    capabilities: {
+        tools: {},
+    },
 });
-
 registerApexTools(server);
 registerOrgTools(server);
 registerRecordTools(server);
@@ -41,14 +38,12 @@ registerSchemaTools(server);
 registerSearchTools(server);
 registerLightningTools(server);
 registerProjectTools(server);
-
 async function main() {
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
-  console.error("Salesforce MCP Server running on stdio");
+    const transport = new StdioServerTransport();
+    await server.connect(transport);
+    console.error("Salesforce MCP Server running on stdio");
 }
-
 main().catch((error) => {
-  console.error("Fatal error in main():", error);
-  process.exit(1);
+    console.error("Fatal error in main():", error);
+    process.exit(1);
 });

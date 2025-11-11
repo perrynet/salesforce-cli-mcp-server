@@ -1,7 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { executeSfCommand } from "../utils/sfCommand.js";
-import { permissions } from "../config/permissions.js";
 
 const executePackageInstall = async (
     targetOrg: string,
@@ -142,34 +141,6 @@ export function registerPackageTools(server: McpServer) {
             }),
         },
         async ({ input }) => {
-            if (permissions.isReadOnly()) {
-                return {
-                    content: [
-                        {
-                            type: "text",
-                            text: JSON.stringify({
-                                error: "Cannot install packages in read-only mode",
-                                readOnlyMode: true,
-                            }),
-                        },
-                    ],
-                };
-            }
-
-            if (!permissions.isOrgAllowed(input.targetOrg)) {
-                return {
-                    content: [
-                        {
-                            type: "text",
-                            text: JSON.stringify({
-                                error: `Access to org '${input.targetOrg}' is not allowed`,
-                                allowedOrgs: permissions.getAllowedOrgs(),
-                            }),
-                        },
-                    ],
-                };
-            }
-
             try {
                 const result = await executePackageInstall(
                     input.targetOrg,
@@ -239,34 +210,6 @@ export function registerPackageTools(server: McpServer) {
             }),
         },
         async ({ input }) => {
-            if (permissions.isReadOnly()) {
-                return {
-                    content: [
-                        {
-                            type: "text",
-                            text: JSON.stringify({
-                                error: "Cannot uninstall packages in read-only mode",
-                                readOnlyMode: true,
-                            }),
-                        },
-                    ],
-                };
-            }
-
-            if (!permissions.isOrgAllowed(input.targetOrg)) {
-                return {
-                    content: [
-                        {
-                            type: "text",
-                            text: JSON.stringify({
-                                error: `Access to org '${input.targetOrg}' is not allowed`,
-                                allowedOrgs: permissions.getAllowedOrgs(),
-                            }),
-                        },
-                    ],
-                };
-            }
-
             try {
                 const result = await executePackageUninstall(
                     input.targetOrg,

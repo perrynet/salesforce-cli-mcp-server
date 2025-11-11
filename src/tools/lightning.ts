@@ -1,14 +1,13 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { getConnection } from "../shared/connection.js";
-import { permissions } from "../config/permissions.js";
-import { executeSfCommand, executeSfCommandRaw } from "../utils/sfCommand.js";
+import { executeSfCommandInProject } from "../utils/sfCommand.js";
 
 const generateComponent = async (
+    sourcePath: string,
     name: string,
     template: string,
     outputDirectory: string,
-    type: string,
+    type: string
 ) => {
     let sfCommand = `sf lightning generate component --name ${name} --json `;
 
@@ -25,7 +24,7 @@ const generateComponent = async (
     }
 
     try {
-        const result = await executeSfCommand(sfCommand);
+        const result = await executeSfCommandInProject(sfCommand, sourcePath);
         return result;
     } catch (error) {
         throw error;
@@ -35,58 +34,49 @@ const generateComponent = async (
 export const registerLightningTools = (server: McpServer) => {
     server.tool(
         "generate_component",
-        "",
+        "Generate a Lightning Component from a project",
         {
             input: z.object({
+                sourcePath: z
+                    .string()
+                    .describe(
+                        "Absolute path to the Salesforce DX project directory (must contain .sf/config.json)"
+                    ),
                 name: z
                     .string()
                     .describe(
-                        "Name of the generated Lightning Component. The name can be up to 40 characters and must start with a letter.",
+                        "Name of the generated Lightning Component. The name can be up to 40 characters and must start with a letter."
                     ),
                 template: z
                     .string()
                     .optional()
                     .describe(
-                        "Template to use for file creation. Supplied parameter values or default values are filled into a copy of the template. Permissible values are: default, analyticsDashboard, analyticsDashboardWithStep. Default value: default",
+                        "Template to use for file creation. Supplied parameter values or default values are filled into a copy of the template. Permissible values are: default, analyticsDashboard, analyticsDashboardWithStep. Default value: default"
                     ),
                 outputDirectory: z
                     .string()
                     .optional()
                     .describe(
-                        "Directory for saving the created files. The location can be an absolute path or relative to the current working directory. The default is the current directory. Default value: .",
+                        "Directory for saving the created files. The location can be an absolute path or relative to the current working directory. The default is the current directory. Default value: ."
                     ),
                 type: z
                     .string()
                     .optional()
                     .describe(
-                        "Type of the component bundle. Permissible values are: aura, lwc (lightning web component). Default value: aura",
+                        "Type of the component bundle. Permissible values are: aura, lwc (lightning web component). Default value: aura"
                     ),
             }),
         },
         async ({ input }) => {
-            const { name, template, outputDirectory, type } = input;
+            const { sourcePath, name, template, outputDirectory, type } = input;
             const DEFAULT_OUTPUT = ".";
-            if (permissions.isReadOnly()) {
-                return {
-                    content: [
-                        {
-                            type: "text",
-                            text: JSON.stringify({
-                                success: false,
-                                compiled: false,
-                                compileProblem:
-                                    "Operation not allowed: Cannot generate components in READ_ONLY mode",
-                            }),
-                        },
-                    ],
-                };
-            }
 
             const result = await generateComponent(
+                sourcePath,
                 name,
                 template || "",
                 outputDirectory || DEFAULT_OUTPUT,
-                type || "",
+                type || ""
             );
             return {
                 content: [
@@ -96,6 +86,6 @@ export const registerLightningTools = (server: McpServer) => {
                     },
                 ],
             };
-        },
+        }
     );
 };

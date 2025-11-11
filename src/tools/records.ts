@@ -1,399 +1,356 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { permissions } from "../config/permissions.js";
-import { getOrgInfo, getOrgAccessToken } from "../shared/connection.js";
-import { exec } from "node:child_process";
-import { platform } from "node:os";
+import { executeSfCommandInProject } from "../utils/sfCommand.js";
+import { buildSfCommand } from "../shared/connection.js";
 import z from "zod";
 
-type McpResponse = {
-    content: Array<{
-        type: "text";
-        text: string;
-    }>;
-};
-
-const createErrorResponse = (
-    message: string,
-    additional?: object
-): McpResponse => ({
-    content: [
-        {
-            type: "text" as const,
-            text: JSON.stringify({
-                success: false,
-                message,
-                ...additional,
-            }),
-        },
-    ],
-});
-
-const createSuccessResponse = (
-    message: string,
-    data?: object
-): McpResponse => ({
-    content: [
-        {
-            type: "text" as const,
-            text: JSON.stringify({
-                success: true,
-                message,
-                ...data,
-            }),
-        },
-    ],
-});
-
-const checkOrgPermissions = (targetOrg: string): McpResponse | null => {
-    if (!permissions.isOrgAllowed(targetOrg)) {
-        return createErrorResponse(
-            `Access to org '${targetOrg}' is not allowed`
-        );
-    }
-    return null;
-};
-
-const parseJsonData = (
-    jsonString: string
-): { data: any; error: McpResponse | null } => {
-    try {
-        return { data: JSON.parse(jsonString), error: null };
-    } catch (e) {
-        return {
-            data: null,
-            error: createErrorResponse("Invalid JSON format for record data"),
-        };
-    }
-};
-
-const prepareSalesforceRequest = async (
-    targetOrg: string
-): Promise<{
-    orgInfo?: any;
-    accessToken?: string;
-    error: McpResponse | null;
-}> => {
-    const orgInfo = await getOrgInfo(targetOrg);
-    if (!orgInfo) {
-        return {
-            error: createErrorResponse(
-                `Could not get org info for ${targetOrg}`
-            ),
-        };
-    }
-
-    const accessToken = await getOrgAccessToken(targetOrg);
-    return { orgInfo, accessToken, error: null };
-};
-
-const getSalesforceEndpoint = (
-    orgInfo: any,
-    sObject: string,
-    recordId?: string
+const createRecord = async (
+  sourcePath: string,
+  sObject: string,
+  values: string,
+  targetOrg?: string
 ) => {
-    const baseUrl = `${orgInfo.instanceUrl}/services/data/v${orgInfo.apiVersion}/sobjects/${sObject}`;
-    return recordId ? `${baseUrl}/${recordId}` : `${baseUrl}/`;
+  const command = buildSfCommand(
+    `sf data create record --sobject ${sObject} --values "${values}"`,
+    targetOrg,
+    sourcePath
+  );
+
+  try {
+    const result = await executeSfCommandInProject(command, sourcePath);
+    return result;
+  } catch (error) {
+    throw error;
+  }
 };
 
-const executeSalesforceRestApi = async (
-    targetOrg: string,
-    sObject: string,
-    method: string,
-    recordId?: string,
-    recordData?: any
-): Promise<McpResponse> => {
-    const permissionError = checkOrgPermissions(targetOrg);
-    if (permissionError) return permissionError;
+const updateRecord = async (
+  sourcePath: string,
+  sObject: string,
+  recordId: string,
+  values: string,
+  targetOrg?: string
+) => {
+  const command = buildSfCommand(
+    `sf data update record --sobject ${sObject} --record-id ${recordId} --values "${values}"`,
+    targetOrg,
+    sourcePath
+  );
 
-    if (
-        permissions.isReadOnly() &&
-        (method === "POST" || method === "PATCH" || method === "DELETE")
-    ) {
-        const action =
-            method === "POST"
-                ? "create"
-                : method === "PATCH"
-                ? "update"
-                : "delete";
-        return createErrorResponse(
-            `Cannot ${action} records: Server is in read-only mode`
-        );
-    }
-
-    try {
-        const { orgInfo, accessToken, error } = await prepareSalesforceRequest(
-            targetOrg
-        );
-        if (error) return error;
-
-        const endpoint = getSalesforceEndpoint(orgInfo!, sObject, recordId);
-
-        const headers: any = {
-            Authorization: `Bearer ${accessToken}`,
-        };
-        if (recordData) {
-            headers["Content-Type"] = "application/json";
-        }
-
-        const response = await fetch(endpoint, {
-            method,
-            headers,
-            body: recordData ? JSON.stringify(recordData) : undefined,
-        });
-
-        if (method === "POST") {
-            const result = await response.json();
-            if (response.ok) {
-                return createSuccessResponse(
-                    `Successfully created ${sObject} record`,
-                    { id: result.id, result }
-                );
-            } else {
-                return createErrorResponse(
-                    `Failed to create record: ${response.statusText}`,
-                    { errors: result, status: response.status }
-                );
-            }
-        } else if (method === "PATCH" || method === "DELETE") {
-            if (response.status === 204) {
-                const action = method === "PATCH" ? "updated" : "deleted";
-                return createSuccessResponse(
-                    `Successfully ${action} ${sObject} record`,
-                    { id: recordId }
-                );
-            } else {
-                const result = await response.json();
-                const action = method === "PATCH" ? "update" : "delete";
-                return createErrorResponse(
-                    `Failed to ${action} record: ${response.statusText}`,
-                    { errors: result, status: response.status }
-                );
-            }
-        }
-
-        return createErrorResponse("Unknown HTTP method");
-    } catch (error) {
-        const action =
-            method === "POST"
-                ? "create"
-                : method === "PATCH"
-                ? "update"
-                : "delete";
-        return createErrorResponse(
-            error instanceof Error
-                ? error.message
-                : `Failed to ${action} record`
-        );
-    }
+  try {
+    const result = await executeSfCommandInProject(command, sourcePath);
+    return result;
+  } catch (error) {
+    throw error;
+  }
 };
 
-type OpenRecordResult = {
-    success: boolean;
-    url: string;
-    message: string;
+const deleteRecord = async (
+  sourcePath: string,
+  sObject: string,
+  recordId: string,
+  targetOrg?: string
+) => {
+  const command = buildSfCommand(
+    `sf data delete record --sobject ${sObject} --record-id ${recordId}`,
+    targetOrg,
+    sourcePath
+  );
+
+  try {
+    const result = await executeSfCommandInProject(command, sourcePath);
+    return result;
+  } catch (error) {
+    throw error;
+  }
 };
 
-const openRecordInBrowser = async (
-    targetOrg: string,
-    recordId: string
-): Promise<OpenRecordResult> => {
-    const orgInfo = await getOrgInfo(targetOrg);
-    if (!orgInfo) {
-        throw new Error(`Could not get org info for ${targetOrg}`);
-    }
+const getRecord = async (
+  sourcePath: string,
+  sObject: string,
+  recordId: string,
+  targetOrg?: string
+) => {
+  const command = buildSfCommand(
+    `sf data get record --sobject ${sObject} --record-id ${recordId}`,
+    targetOrg,
+    sourcePath
+  );
 
-    const instanceUrl = orgInfo.instanceUrl;
-    const url = `${instanceUrl}/${recordId}`;
-
-    const currentPlatform = platform();
-    let command: string;
-
-    switch (currentPlatform) {
-        case "darwin":
-            command = `open "${url}"`;
-            break;
-        case "win32":
-            command = `start "" "${url}"`;
-            break;
-        default:
-            command = `xdg-open "${url}"`;
-            break;
-    }
-
-    return new Promise((resolve, reject) => {
-        exec(command, (error, stdout, stderr) => {
-            if (error) {
-                reject(new Error(`Failed to open browser: ${error.message}`));
-                return;
-            }
-            resolve({
-                success: true,
-                url,
-                message: `Opened ${recordId} in browser`,
-            });
-        });
-    });
+  try {
+    const result = await executeSfCommandInProject(command, sourcePath);
+    return result;
+  } catch (error) {
+    throw error;
+  }
 };
 
-export const registerOrgTools = (server: McpServer) => {
-    server.tool(
-        "open_record",
-        "Opens a Salesforce record in a browser.",
-        {
-            input: z.object({
-                targetOrg: z
-                    .string()
-                    .describe(
-                        "Username or alias of the target org. Not required if the 'target-org' configuration variable is already set."
-                    ),
-                recordId: z
-                    .string()
-                    .describe("Id of the Salesforce record to open"),
-            }),
-        },
-        async ({ input }) => {
-            const { targetOrg, recordId } = input;
+const upsertRecord = async (
+  sourcePath: string,
+  sObject: string,
+  externalIdField: string,
+  externalIdValue: string,
+  values: string,
+  targetOrg?: string
+) => {
+  const command = buildSfCommand(
+    `sf data upsert record --sobject ${sObject} --external-id ${externalIdField}:${externalIdValue} --values "${values}"`,
+    targetOrg,
+    sourcePath
+  );
 
-            if (!targetOrg || targetOrg.trim() === "") {
-                return createErrorResponse("Target org is required");
-            }
+  try {
+    const result = await executeSfCommandInProject(command, sourcePath);
+    return result;
+  } catch (error) {
+    throw error;
+  }
+};
 
-            if (!recordId || recordId.trim() === "") {
-                return createErrorResponse("Salesforce record Id is required");
-            }
+export const registerRecordTools = (server: McpServer) => {
+  server.tool(
+    "create_record",
+    "Create a new record in a Salesforce org from a project using the SF CLI. Returns the ID of the created record on success.",
+    {
+      input: z.object({
+        sourcePath: z
+          .string()
+          .describe(
+            "Absolute path to the Salesforce DX project directory (must contain .sf/config.json)"
+          ),
+        sObject: z
+          .string()
+          .describe(
+            "API name of the Salesforce object to create a record for (e.g., 'Account', 'Contact', 'CustomObject__c'). Execute the sobject_list tool first to get the correct API name."
+          ),
+        values: z
+          .string()
+          .describe(
+            'Field values for the new record in the format Field=Value, space-separated. Example: "Name=Acme Type=Customer". Execute the sobject_describe tool first to get the correct field API names.'
+          ),
+        targetOrg: z
+          .string()
+          .optional()
+          .describe(
+            "Target org username or alias (optional - uses default org from project if not provided)"
+          ),
+      }),
+    },
+    async ({ input }) => {
+      const { sourcePath, sObject, values, targetOrg } = input;
 
-            const permissionError = checkOrgPermissions(targetOrg);
-            if (permissionError) return permissionError;
+      const result = await createRecord(sourcePath, sObject, values, targetOrg);
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(result),
+          },
+        ],
+      };
+    }
+  );
 
-            try {
-                const result = await openRecordInBrowser(targetOrg, recordId);
-                return createSuccessResponse(result.message, {
-                    url: result.url,
-                });
-            } catch (error) {
-                return createErrorResponse(
-                    error instanceof Error
-                        ? error.message
-                        : "Failed to open record in browser"
-                );
-            }
-        }
-    );
+  server.tool(
+    "update_record",
+    "Update an existing record in a Salesforce org from a project using the SF CLI. Updates specified fields on the record.",
+    {
+      input: z.object({
+        sourcePath: z
+          .string()
+          .describe(
+            "Absolute path to the Salesforce DX project directory (must contain .sf/config.json)"
+          ),
+        sObject: z
+          .string()
+          .describe(
+            "API name of the Salesforce object (e.g., 'Account', 'Contact', 'CustomObject__c'). Execute the sobject_list tool first to get the correct API name."
+          ),
+        recordId: z
+          .string()
+          .describe("Salesforce record ID to update (15 or 18 character ID)"),
+        values: z
+          .string()
+          .describe(
+            "Field values to update in the format Field=Value, space-separated. Example: \"BillingCity='San Francisco' Phone='(555) 123-4567'\". Execute the sobject_describe tool first to get the correct field API names. Only include fields you want to update."
+          ),
+        targetOrg: z
+          .string()
+          .optional()
+          .describe(
+            "Target org username or alias (optional - uses default org from project if not provided)"
+          ),
+      }),
+    },
+    async ({ input }) => {
+      const { sourcePath, sObject, recordId, values, targetOrg } = input;
 
-    server.tool(
-        "create_record",
-        "Create a new record in a Salesforce org using the REST API. Returns the ID of the created record on success.",
-        {
-            input: z.object({
-                targetOrg: z
-                    .string()
-                    .describe(
-                        "Username or alias of the target org. Not required if the 'target-org' configuration variable is already set."
-                    ),
-                sObject: z
-                    .string()
-                    .describe(
-                        "API name of the Salesforce object to create a record for (e.g., 'Account', 'Contact', 'CustomObject__c'). Execute the sobject_list tool first to get the correct API name of the SOjbect."
-                    ),
-                recordJson: z
-                    .string()
-                    .describe(
-                        'JSON string containing the field values for the new record. Example: \'{"Name": "Acme Corp", "Type": "Customer"}\'. Execute the sobject_describe tool first to get the correct field API names and relationships.'
-                    ),
-            }),
-        },
-        async ({ input }) => {
-            const { targetOrg, sObject, recordJson } = input;
+      const result = await updateRecord(
+        sourcePath,
+        sObject,
+        recordId,
+        values,
+        targetOrg
+      );
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(result),
+          },
+        ],
+      };
+    }
+  );
 
-            const { data: recordData, error: jsonError } =
-                parseJsonData(recordJson);
-            if (jsonError) return jsonError;
+  server.tool(
+    "delete_record",
+    "Delete a record from a Salesforce org from a project using the SF CLI. Permanently removes the specified record.",
+    {
+      input: z.object({
+        sourcePath: z
+          .string()
+          .describe(
+            "Absolute path to the Salesforce DX project directory (must contain .sf/config.json)"
+          ),
+        sObject: z
+          .string()
+          .describe(
+            "API name of the Salesforce object (e.g., 'Account', 'Contact', 'CustomObject__c'). Execute the sobject_list tool first to get the correct API name."
+          ),
+        recordId: z
+          .string()
+          .describe("Salesforce record ID to delete (15 or 18 character ID)"),
+        targetOrg: z
+          .string()
+          .optional()
+          .describe(
+            "Target org username or alias (optional - uses default org from project if not provided)"
+          ),
+      }),
+    },
+    async ({ input }) => {
+      const { sourcePath, sObject, recordId, targetOrg } = input;
 
-            return executeSalesforceRestApi(
-                targetOrg,
-                sObject,
-                "POST",
-                undefined,
-                recordData
-            );
-        }
-    );
+      const result = await deleteRecord(
+        sourcePath,
+        sObject,
+        recordId,
+        targetOrg
+      );
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(result),
+          },
+        ],
+      };
+    }
+  );
 
-    server.tool(
-        "update_record",
-        "Update an existing record in a Salesforce org using the REST API. Updates specified fields on the record.",
-        {
-            input: z.object({
-                targetOrg: z
-                    .string()
-                    .describe(
-                        "Username or alias of the target org. Not required if the 'target-org' configuration variable is already set."
-                    ),
-                sObject: z
-                    .string()
-                    .describe(
-                        "API name of the Salesforce object (e.g., 'Account', 'Contact', 'CustomObject__c'). Execute the sobject_list tool first to get the correct API name of the SObject."
-                    ),
-                recordId: z
-                    .string()
-                    .describe(
-                        "Salesforce record ID to update (15 or 18 character ID)"
-                    ),
-                recordJson: z
-                    .string()
-                    .describe(
-                        'JSON string containing the field values to update. Example: \'{"BillingCity": "San Francisco", "Phone": "(555) 123-4567"}\'. Execute the sobject_describe tool first to get the correct field API names. Only include fields you want to update.'
-                    ),
-            }),
-        },
-        async ({ input }) => {
-            const { targetOrg, sObject, recordId, recordJson } = input;
+  server.tool(
+    "get_record",
+    "Get a record from a Salesforce org from a project using the SF CLI. Retrieves all field values for the specified record.",
+    {
+      input: z.object({
+        sourcePath: z
+          .string()
+          .describe(
+            "Absolute path to the Salesforce DX project directory (must contain .sf/config.json)"
+          ),
+        sObject: z
+          .string()
+          .describe(
+            "API name of the Salesforce object (e.g., 'Account', 'Contact', 'CustomObject__c'). Execute the sobject_list tool first to get the correct API name."
+          ),
+        recordId: z
+          .string()
+          .describe("Salesforce record ID to retrieve (15 or 18 character ID)"),
+        targetOrg: z
+          .string()
+          .optional()
+          .describe(
+            "Target org username or alias (optional - uses default org from project if not provided)"
+          ),
+      }),
+    },
+    async ({ input }) => {
+      const { sourcePath, sObject, recordId, targetOrg } = input;
 
-            const { data: recordData, error: jsonError } =
-                parseJsonData(recordJson);
-            if (jsonError) return jsonError;
+      const result = await getRecord(sourcePath, sObject, recordId, targetOrg);
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(result),
+          },
+        ],
+      };
+    }
+  );
 
-            return executeSalesforceRestApi(
-                targetOrg,
-                sObject,
-                "PATCH",
-                recordId,
-                recordData
-            );
-        }
-    );
+  server.tool(
+    "upsert_record",
+    "Upsert (insert or update) a record in a Salesforce org from a project using the SF CLI. Creates a new record if it doesn't exist, or updates if it does based on an external ID field.",
+    {
+      input: z.object({
+        sourcePath: z
+          .string()
+          .describe(
+            "Absolute path to the Salesforce DX project directory (must contain .sf/config.json)"
+          ),
+        sObject: z
+          .string()
+          .describe(
+            "API name of the Salesforce object (e.g., 'Account', 'Contact', 'CustomObject__c'). Execute the sobject_list tool first to get the correct API name."
+          ),
+        externalIdField: z
+          .string()
+          .describe(
+            "API name of the external ID field to use for matching (e.g., 'ExternalId__c'). Execute the sobject_describe tool to see which fields are marked as external IDs."
+          ),
+        externalIdValue: z
+          .string()
+          .describe("Value of the external ID field to match against"),
+        values: z
+          .string()
+          .describe(
+            'Field values for the record in the format Field=Value, space-separated. Example: "Name=Acme Type=Customer". Execute the sobject_describe tool first to get the correct field API names.'
+          ),
+        targetOrg: z
+          .string()
+          .optional()
+          .describe(
+            "Target org username or alias (optional - uses default org from project if not provided)"
+          ),
+      }),
+    },
+    async ({ input }) => {
+      const {
+        sourcePath,
+        sObject,
+        externalIdField,
+        externalIdValue,
+        values,
+        targetOrg,
+      } = input;
 
-    server.tool(
-        "delete_record",
-        "Delete a record from a Salesforce org using the REST API. Permanently removes the specified record.",
-        {
-            input: z.object({
-                targetOrg: z
-                    .string()
-                    .describe(
-                        "Username or alias of the target org. Not required if the 'target-org' configuration variable is already set."
-                    ),
-                sObject: z
-                    .string()
-                    .describe(
-                        "API name of the Salesforce object (e.g., 'Account', 'Contact', 'CustomObject__c'). Execute the sobject_list tool first to get the correct API name of the SObject."
-                    ),
-                recordId: z
-                    .string()
-                    .describe(
-                        "Salesforce record ID to delete (15 or 18 character ID)"
-                    ),
-            }),
-        },
-        async ({ input }) => {
-            const { targetOrg, sObject, recordId } = input;
-
-            return executeSalesforceRestApi(
-                targetOrg,
-                sObject,
-                "DELETE",
-                recordId
-            );
-        }
-    );
+      const result = await upsertRecord(
+        sourcePath,
+        sObject,
+        externalIdField,
+        externalIdValue,
+        values,
+        targetOrg
+      );
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(result),
+          },
+        ],
+      };
+    }
+  );
 };

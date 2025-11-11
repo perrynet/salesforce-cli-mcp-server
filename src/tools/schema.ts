@@ -1,9 +1,13 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { permissions } from "../config/permissions.js";
-import { executeSfCommand } from "../utils/sfCommand.js";
+import { executeSfCommandInProject } from "../utils/sfCommand.js";
 import z from "zod";
 
 const schemaGenerateTabInputSchema = z.object({
+    sourcePath: z
+        .string()
+        .describe(
+            "Absolute path to the Salesforce DX project directory (must contain .sf/config.json)"
+        ),
     object: z
         .string()
         .describe("API name of the custom object (e.g., MyObject__c)"),
@@ -25,18 +29,12 @@ const schemaGenerateTabInputSchema = z.object({
 const schemaGenerateTab = async (
     input: z.infer<typeof schemaGenerateTabInputSchema>
 ) => {
-    const { object, directory, icon } = input;
-
-    if (permissions.isReadOnly()) {
-        return {
-            error: "Operation not permitted in read-only mode",
-        };
-    }
+    const { sourcePath, object, directory, icon } = input;
 
     try {
         let sfCommand = `sf schema generate tab --object "${object}" --directory "${directory}" --icon ${icon}`;
 
-        const result = await executeSfCommand(sfCommand);
+        const result = await executeSfCommandInProject(sfCommand, sourcePath);
         return { result };
     } catch (error: any) {
         return {
@@ -48,7 +46,7 @@ const schemaGenerateTab = async (
 export const registerSchemaTools = (server: McpServer) => {
     server.tool(
         "schema_generate_tab",
-        "Generate metadata source files for a new custom tab on a custom object. Custom tabs display custom object data in Salesforce navigation.",
+        "Generate metadata source files for a new custom tab on a custom object from a project. Custom tabs display custom object data in Salesforce navigation.",
         {
             input: schemaGenerateTabInputSchema,
         },

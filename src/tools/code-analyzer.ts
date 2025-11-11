@@ -1,9 +1,9 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { executeSfCommandRaw } from "../utils/sfCommand.js";
-import { permissions } from "../config/permissions.js";
+import { executeSfCommandInProjectRaw } from "../utils/sfCommand.js";
 
 const runCodeAnalyzer = async (
+    sourcePath: string,
     workspace?: string[],
     target?: string[],
     outputFile?: string,
@@ -43,11 +43,12 @@ const runCodeAnalyzer = async (
         command += ` --config-file "${configFile}"`;
     }
 
-    const result = await executeSfCommandRaw(command);
+    const result = await executeSfCommandInProjectRaw(command, sourcePath);
     return result;
 };
 
 const listCodeAnalyzerRules = async (
+    sourcePath: string,
     workspace?: string[],
     target?: string[],
     configFile?: string,
@@ -82,16 +83,21 @@ const listCodeAnalyzerRules = async (
         command += ` --view ${view}`;
     }
 
-    const result = await executeSfCommandRaw(command);
+    const result = await executeSfCommandInProjectRaw(command, sourcePath);
     return result;
 };
 
 export const registerCodeAnalyzerTools = (server: McpServer) => {
     server.tool(
         "run_code_analyzer",
-        'Analyze your code with a selection of rules to ensure good coding practices. You can scan your codebase with the recommended rules. Or use flags to filter the rules based on engines (such as "retire-js" or "eslint"), rule names, tags, and more. Always execute the `list_code_analyzer_rules` tool first to understnad which rules to provide into ruleSelector parameter based on the files to be scanned.',
+        'Analyze your code from a project with a selection of rules to ensure good coding practices. You can scan your codebase with the recommended rules. Or use flags to filter the rules based on engines (such as "retire-js" or "eslint"), rule names, tags, and more. Always execute the `list_code_analyzer_rules` tool first to understand which rules to provide into ruleSelector parameter based on the files to be scanned.',
         {
             input: z.object({
+                sourcePath: z
+                    .string()
+                    .describe(
+                        "Absolute path to the Salesforce DX project directory (must contain .sf/config.json)"
+                    ),
                 workspace: z
                     .array(z.string())
                     .optional()
@@ -131,6 +137,7 @@ export const registerCodeAnalyzerTools = (server: McpServer) => {
         },
         async ({ input }) => {
             const {
+                sourcePath,
                 workspace,
                 target,
                 outputFile,
@@ -139,23 +146,9 @@ export const registerCodeAnalyzerTools = (server: McpServer) => {
                 configFile,
             } = input;
 
-            if (permissions.isReadOnly()) {
-                return {
-                    content: [
-                        {
-                            type: "text",
-                            text: JSON.stringify({
-                                success: false,
-                                message:
-                                    "Code analysis is disabled in read-only mode",
-                            }),
-                        },
-                    ],
-                };
-            }
-
             try {
                 const result = await runCodeAnalyzer(
+                    sourcePath,
                     workspace,
                     target,
                     outputFile,
@@ -193,9 +186,14 @@ export const registerCodeAnalyzerTools = (server: McpServer) => {
 
     server.tool(
         "list_code_analyzer_rules",
-        "List the rules that are available to analyze your code. You can also view details about the rules, such as the engine it's associated with, tags, and description. Use this command to determine the exact set of rules to analyze your code. The `code-analyzer run` command has similar flags as this command, so once you've determined the flag values for this command that list the rules you want to run, you specify the same values to the `code-analyzer run` command.",
+        "List the rules that are available to analyze your code from a project. You can also view details about the rules, such as the engine it's associated with, tags, and description. Use this command to determine the exact set of rules to analyze your code. The `code-analyzer run` command has similar flags as this command, so once you've determined the flag values for this command that list the rules you want to run, you specify the same values to the `code-analyzer run` command.",
         {
             input: z.object({
+                sourcePath: z
+                    .string()
+                    .describe(
+                        "Absolute path to the Salesforce DX project directory (must contain .sf/config.json)"
+                    ),
                 workspace: z
                     .array(z.string())
                     .optional()
@@ -229,10 +227,18 @@ export const registerCodeAnalyzerTools = (server: McpServer) => {
             }),
         },
         async ({ input }) => {
-            const { workspace, target, configFile, ruleSelector, view } = input;
+            const {
+                sourcePath,
+                workspace,
+                target,
+                configFile,
+                ruleSelector,
+                view,
+            } = input;
 
             try {
                 const result = await listCodeAnalyzerRules(
+                    sourcePath,
                     workspace,
                     target,
                     configFile,

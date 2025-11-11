@@ -1,9 +1,9 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { executeSfCommandRaw } from "../utils/sfCommand.js";
-import { permissions } from "../config/permissions.js";
+import { executeSfCommandInProjectRaw } from "../utils/sfCommand.js";
 
 const runScanner = async (
+    sourcePath: string,
     target?: string[],
     category?: string[],
     engine?: string[],
@@ -72,11 +72,12 @@ const runScanner = async (
         command += ` --verbose-violations`;
     }
 
-    const result = await executeSfCommandRaw(command);
+    const result = await executeSfCommandInProjectRaw(command, sourcePath);
     return result;
 };
 
 const runScannerDfa = async (
+    sourcePath: string,
     target?: string[],
     projectDir?: string[],
     category?: string[],
@@ -150,16 +151,21 @@ const runScannerDfa = async (
         command += ` --pathexplimit ${pathExpLimit}`;
     }
 
-    const result = await executeSfCommandRaw(command);
+    const result = await executeSfCommandInProjectRaw(command, sourcePath);
     return result;
 };
 
 export const registerScannerTools = (server: McpServer) => {
     server.tool(
         "scanner_run",
-        "Scan a codebase with a selection of rules. Evaluates rules against specified files and outputs results. When invoked without specifying any rules, all rules are run by default. If any of the input parameters were not provided, then you choose them based on the target file or files.",
+        "Scan a codebase from a project with a selection of rules. Evaluates rules against specified files and outputs results. When invoked without specifying any rules, all rules are run by default. If any of the input parameters were not provided, then you choose them based on the target file or files.",
         {
             input: z.object({
+                sourcePath: z
+                    .string()
+                    .describe(
+                        "Absolute path to the Salesforce DX project directory (must contain .sf/config.json)"
+                    ),
                 target: z
                     .array(z.string())
                     .optional()
@@ -259,6 +265,7 @@ export const registerScannerTools = (server: McpServer) => {
         },
         async ({ input }) => {
             const {
+                sourcePath,
                 target,
                 category,
                 engine,
@@ -274,23 +281,9 @@ export const registerScannerTools = (server: McpServer) => {
                 verboseViolations,
             } = input;
 
-            if (permissions.isReadOnly()) {
-                return {
-                    content: [
-                        {
-                            type: "text",
-                            text: JSON.stringify({
-                                success: false,
-                                message:
-                                    "Scanner is disabled in read-only mode",
-                            }),
-                        },
-                    ],
-                };
-            }
-
             try {
                 const result = await runScanner(
+                    sourcePath,
                     target,
                     category,
                     engine,
@@ -334,9 +327,14 @@ export const registerScannerTools = (server: McpServer) => {
 
     server.tool(
         "scanner_run_dfa",
-        "Run Salesforce Graph Engine to scan Apex code for data flow analysis issues. This performs path-based analysis to identify complex issues like SQL injection, SOQL injection, and other security vulnerabilities. If any of the input parameters were not provided, then you choose them based on the target file or files.",
+        "Run Salesforce Graph Engine from a project to scan Apex code for data flow analysis issues. This performs path-based analysis to identify complex issues like SQL injection, SOQL injection, and other security vulnerabilities. If any of the input parameters were not provided, then you choose them based on the target file or files.",
         {
             input: z.object({
+                sourcePath: z
+                    .string()
+                    .describe(
+                        "Absolute path to the Salesforce DX project directory (must contain .sf/config.json)"
+                    ),
                 target: z
                     .array(z.string())
                     .optional()
@@ -429,6 +427,7 @@ export const registerScannerTools = (server: McpServer) => {
         },
         async ({ input }) => {
             const {
+                sourcePath,
                 target,
                 projectDir,
                 category,
@@ -445,23 +444,9 @@ export const registerScannerTools = (server: McpServer) => {
                 pathExpLimit,
             } = input;
 
-            if (permissions.isReadOnly()) {
-                return {
-                    content: [
-                        {
-                            type: "text",
-                            text: JSON.stringify({
-                                success: false,
-                                message:
-                                    "Scanner DFA is disabled in read-only mode",
-                            }),
-                        },
-                    ],
-                };
-            }
-
             try {
                 const result = await runScannerDfa(
+                    sourcePath,
                     target,
                     projectDir,
                     category,

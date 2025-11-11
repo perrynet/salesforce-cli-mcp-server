@@ -1,50 +1,50 @@
 {
-    "name": "@advanced-communities/salesforce-mcp-server",
-    "version": "1.5.1",
-    "description": "MCP server enabling AI assistants to interact with Salesforce orgs through the Salesforce CLI",
-    "main": "./src/index.ts",
-    "scripts": {
-        "build": "tsc && chmod 755 build/index.js",
-        "dev": "npm run build && npx @modelcontextprotocol/inspector node ./build/index.js",
-        "build:dxt": "npm run build && mkdir -p dist && npx dxt pack . dist/salesforce-mcp-server.dxt"
-    },
-    "keywords": [
-        "salesforce",
-        "mcp",
-        "model-context-protocol",
-        "ai",
-        "salesforce-cli",
-        "apex",
-        "soql",
-        "sobject",
-        "salesforce-api",
-        "salesforce-integration",
-        "mcp-server",
-        "ai-assistant",
-        "salesforce-development",
-        "salesforce-automation"
-    ],
-    "author": "Advanced Communities",
-    "license": "MIT",
-    "repository": {
-        "type": "git",
-        "url": "git+https://github.com/advancedcommunities/salesforce-mcp-server.git"
-    },
-    "type": "module",
-    "bin": {
-        "salesforce-mcp-server": "build/index.js"
-    },
-    "files": [
-        "build"
-    ],
-    "dependencies": {
-        "@modelcontextprotocol/sdk": "^1.12.3",
-        "@salesforce/apex-node": "^8.2.6",
-        "zod": "^3.25.64"
-    },
-    "devDependencies": {
-        "@anthropic-ai/dxt": "^0.2.6",
-        "@types/node": "^24.0.1",
-        "typescript": "^5.8.3"
-    }
+	"name": "perrynet@salesforce-cli-server",
+	"version": "2.0.0",
+	"description": "MCP server enabling AI assistants to interact with Salesforce orgs through project-based Salesforce CLI integration",
+	"main": "./src/index.ts",
+	"scripts": {
+		"build": "tsc && chmod 755 build/index.js",
+		"dev": "npm run build && npx @modelcontextprotocol/inspector node ./build/index.js",
+		"build:dxt": "npm run build && mkdir -p dist && npx dxt pack . dist/perrynet@salesforce-cli-server.dxt"
+	},
+	"keywords": [
+		"salesforce",
+		"mcp",
+		"model-context-protocol",
+		"ai",
+		"salesforce-cli",
+		"apex",
+		"soql",
+		"sobject",
+		"salesforce-api",
+		"salesforce-integration",
+		"mcp-server",
+		"ai-assistant",
+		"salesforce-development",
+		"salesforce-automation"
+	],
+	"author": "Perrynet",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/perrynet/salesforce-cli-mcp-server.git"
+	},
+	"type": "module",
+	"bin": {
+		"perrynet@salesforce-cli-server": "build/index.js"
+	},
+	"files": [
+		"build"
+	],
+	"dependencies": {
+		"@modelcontextprotocol/sdk": "^1.12.3",
+		"@salesforce/apex-node": "^8.2.6",
+		"zod": "^3.25.64"
+	},
+	"devDependencies": {
+		"@anthropic-ai/dxt": "^0.2.6",
+		"@types/node": "^24.0.1",
+		"typescript": "^5.8.3"
+	}
 }

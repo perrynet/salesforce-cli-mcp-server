@@ -1,13 +1,12 @@
 # Salesforce MCP Server
 
-[![NPM Version](https://img.shields.io/npm/v/@advanced-communities/salesforce-mcp-server)](https://www.npmjs.com/package/@advanced-communities/salesforce-mcp-server)
-[![License](https://img.shields.io/npm/l/@advanced-communities/salesforce-mcp-server)](https://github.com/advancedcommunities/salesforce-mcp-server/blob/main/LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-green)](https://github.com/advancedcommunities/salesforce-mcp-server/blob/main/LICENSE)
 
 ## What is it
 
-Salesforce MCP Server is a Model Context Protocol (MCP) server that enables AI assistants to interact with Salesforce organizations. It provides a set of tools that allow AI models to execute Apex code, query data, describe objects, and manage Salesforce org connections through the Salesforce CLI.
+Salesforce MCP Server v2.0 is a Model Context Protocol (MCP) server that enables AI assistants to interact with Salesforce organizations through project-based CLI integration. It provides tools that allow AI models to execute Apex code, query data, describe objects, and manage Salesforce orgs using your local Salesforce DX project configurations.
 
-**NPM Package**: [@advanced-communities/salesforce-mcp-server](https://www.npmjs.com/package/@advanced-communities/salesforce-mcp-server)
+**Note**: This is a local MCP server that runs from your repository. It is not distributed via NPM.
 
 ### Installation
 
@@ -16,50 +15,27 @@ Salesforce MCP Server is a Model Context Protocol (MCP) server that enables AI a
 - [Node.js (v18 or higher)](https://nodejs.org/en/download)
 - [Salesforce CLI (`sf`) installed and configured](https://developer.salesforce.com/tools/salesforcecli)
 - At least one authenticated Salesforce org
+- Git (to clone this repository)
 
-#### Option 1: NPM Installation (Recommended)
+#### Setup Instructions
 
-The easiest way to install Salesforce MCP Server is directly from NPM using `npx`:
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/advancedcommunities/salesforce-mcp-server.git
+   cd salesforce-mcp-server
+   ```
 
-```bash
-npx @advanced-communities/salesforce-mcp-server
-```
+2. Install dependencies and build:
+   ```bash
+   npm install
+   npm run build
+   ```
 
-This command will:
-
-- Download the latest version from NPM
-- Run the server directly without manual installation
-- Automatically handle all dependencies
-
-**Benefits of NPM Installation:**
-
-- ✅ No manual building required
-- ✅ Always get the latest stable version
-- ✅ Automatic dependency management
-- ✅ Easy updates with `npm update`
-- ✅ No need to clone the repository
-
-#### Option 2: Desktop Extension (DXT) - One-Click Installation
-
-For a fully managed installation experience:
-
-1. Download the latest `salesforce-mcp-server.dxt` file from the [releases page](https://github.com/advancedcommunities/salesforce-mcp-server/releases)
-2. Double-click the `.dxt` file to install
-3. The extension will be automatically configured in your AI client
-4. All dependencies will be managed automatically
-
-#### Option 3: Manual Installation - Build from source
-
-For development or customization:
-
-1. Clone the repository: `git clone https://github.com/advancedcommunities/salesforce-mcp-server.git`
-2. Navigate to the directory: `cd salesforce-mcp-server`
-3. Install and build: `npm install && npm run build`
-4. The server will be available at `build/index.js`
+3. The compiled server will be available at `build/index.js`
 
 #### Add MCP Configuration to your client
 
-To be able to run the MCP Server – you need a client. The client can be any AI app which supports the MCP protocol, such as:
+To use this MCP Server, you need a client that supports the MCP protocol. Configure it with a command that points to the local server.
 
 - [Claude Desktop](https://claude.ai/download)
 - [Claude Code](https://www.anthropic.com/claude-code)
@@ -70,122 +46,85 @@ To be able to run the MCP Server – you need a client. The client can be any AI
 #### Use it with Claude Desktop
 
 1. Install [Claude Desktop](https://claude.ai/download) from Anthropic.
-2. Open it up and authenticate to Claude.
+2. Clone this repository and run `npm install && npm run build` (see Setup Instructions above).
 3. Edit your config file at:
     - Mac: `~/Library/Application\ Support/Claude/claude_desktop_config.json`
     - Windows: `C:\\Users\\YOUR_USERNAME\\AppData\\Roaming\\Claude\\claude_desktop_config.json`
 
     > **If you can't find the file.** Open Claude Desktop, open the Settings menu, go to the Developer section and click Edit Config inside the servers section.
-    > Open and edit this file using the instructions below.
 
-4. Add the following to your config file under the `"mcpServers"` key:
+4. Add the following to your config file under the `"mcpServers"` key (replace `/path/to/repo` with the actual path):
 
     ```json
     {
         "mcpServers": {
-            "salesforce-mcp-server": {
-                "command": "npx",
-                "args": ["@advanced-communities/salesforce-mcp-server"]
+            "perrynet@salesforce-cli-server": {
+                "command": "node",
+                "args": ["/path/to/repo/salesforce-mcp-server/build/index.js"]
             }
         }
     }
     ```
 
-    **With environment variables (optional):**
-
-    ```json
-    {
-        "mcpServers": {
-            "salesforce-mcp-server": {
-                "command": "npx",
-                "args": ["@advanced-communities/salesforce-mcp-server"],
-                "env": {
-                    "READ_ONLY": "true",
-                    "ALLOWED_ORGS": "dev,qa,staging"
-                }
-            }
-        }
-    }
-    ```
-
-5. Restart Claude Desktop (quit & re-open the app). Now you are able to use the MCP in the Claude Desktop.
+5. Restart Claude Desktop (quit & re-open the app). Now you are able to use the MCP in Claude Desktop.
 
 #### Use it with Claude Code
 
 1. Install [Claude Code](https://www.anthropic.com/claude-code).
-2. Open it up and authenticate to Claude by runnung the `claude` command in your terminal.
-3. Execute one of the following commands in your terminal:
-
-    **Basic installation (local scope - default):**
+2. Clone this repository and run `npm install && npm run build`.
+3. Execute the following command in your terminal (replace `/path/to/repo` with the actual path):
 
     ```shell
-    claude mcp add salesforce-mcp-server npx @advanced-communities/salesforce-mcp-server
+    claude mcp add perrynet@salesforce-cli-server node /path/to/repo/salesforce-mcp-server/build/index.js
     ```
 
-    **User scope installation (recommended for global access):**
-
-    ```shell
-    claude mcp add --scope user salesforce-mcp-server npx @advanced-communities/salesforce-mcp-server
-    ```
-
-    **With environment variables:**
-
-    ```shell
-    # Read-only mode (local scope)
-    claude mcp add salesforce-mcp-server npx @advanced-communities/salesforce-mcp-server -e READ_ONLY=true
-
-    # Read-only mode (user scope)
-    claude mcp add --scope user salesforce-mcp-server npx @advanced-communities/salesforce-mcp-server -e READ_ONLY=true
-
-    # Restrict to specific orgs (user scope)
-    claude mcp add --scope user salesforce-mcp-server npx @advanced-communities/salesforce-mcp-server -e ALLOWED_ORGS=dev,qa,staging
-
-    # Both restrictions (user scope)
-    claude mcp add --scope user salesforce-mcp-server npx @advanced-communities/salesforce-mcp-server -e READ_ONLY=true -e ALLOWED_ORGS=production
-    ```
-
-    > **Note**: By default, Claude Code installs MCP servers in local scope (current directory). Use `--scope user` to install globally for all projects.
+    This adds the MCP server in user scope for global access across all projects.
 
 #### Use it with Codex CLI
 
-The Codex CLI can be configured to leverage MCP servers by defining an [mcp_servers](https://github.com/openai/codex/blob/main/codex-rs/config.md#mcp_servers) section in `~/.codex/config.toml`.
-It is intended to mirror how tools such as Claude and Cursor define mcpServers in their respective JSON config files,
-though the Codex format is slightly different since it uses TOML rather than JSON, e.g.:
+Clone this repository and build the server. Then configure Codex CLI by adding an [mcp_servers](https://github.com/openai/codex/blob/main/codex-rs/config.md#mcp_servers) section in `~/.codex/config.toml` (replace `/path/to/repo` with the actual path):
 
 ```toml
-[mcp_servers.salesforce-mcp-server]
-command = "npx"
-args = ["@advanced-communities/salesforce-mcp-server"]
-
-# Optional: Add environment variables
-[mcp_servers.salesforce-mcp-server.env]
-READ_ONLY = "true"
-ALLOWED_ORGS = "dev,qa,staging"
+[mcp_servers.perrynet@salesforce-cli-server]
+command = "node"
+args = ["/path/to/repo/salesforce-mcp-server/build/index.js"]
 ```
 
 #### Use it with VS Code
 
-1. In VS Code, open the Command Palette by pressing `Command + Shift + P` or `Ctrl + Shift + P`.
-2. Type "MCP Add", select the `MCP: Add Server` option.
-3. Select `Command(stdio)` option.
-4. Put the `npx @advanced-communities/salesforce-mcp-server` into the command input.
-5. For MCP Server Id put `salesforce-mcp-server`.
-6. Choose either `Global` or `Workspace` installation option.
-7. (Optional) To add environment variables, manually edit the VS Code settings:
-    - Open settings.json (`Preferences: Open Settings (JSON)`)
-    - Add environment variables to your MCP server configuration:
-    ```json
-    "mcp.servers": {
-      "salesforce-mcp-server": {
-        "command": "npx",
-        "args": ["@advanced-communities/salesforce-mcp-server"],
-        "env": {
-          "READ_ONLY": "true",
-          "ALLOWED_ORGS": "dev,qa"
-        }
-      }
+1. Clone this repository and run `npm install && npm run build`.
+2. In VS Code, open the Command Palette by pressing `Command + Shift + P` or `Ctrl + Shift + P`.
+3. Type "MCP Add", select the `MCP: Add Server` option.
+4. Select `Command(stdio)` option.
+5. Enter the command: `node`
+6. Enter the args: `/path/to/repo/salesforce-mcp-server/build/index.js` (replace with actual path)
+7. For MCP Server Id put `perrynet@salesforce-cli-server`.
+8. Choose either `Global` or `Workspace` installation option.
+
+**Alternative: Workspace-specific configuration for GitHub Copilot**
+
+If you want to configure the MCP server for a specific VS Code workspace (useful for GitHub Copilot integration), create or edit `.vscode/mcp.json` in your workspace root (replace `/path/to/repo` with actual path):
+
+```json
+{
+  "mcpServers": {
+    "perrynet@salesforce-cli-server": {
+      "command": "node",
+      "args": [
+        "/path/to/repo/salesforce-mcp-server/build/index.js"
+      ]
     }
-    ```
+  }
+}
+```
+
+This configuration:
+- ✅ Enables Salesforce tools in GitHub Copilot Chat within VS Code
+- ✅ Scoped to the specific workspace/project
+- ✅ Automatically activated when you open the workspace
+- ✅ No global configuration needed
+
+After creating the file, reload VS Code or restart the Copilot extension for the changes to take effect.
 
 #### Use it with Cursor
 
@@ -193,104 +132,91 @@ ALLOWED_ORGS = "dev,qa,staging"
 2. Open it up and create your account and connect to a model provider
 3. Open `Cursor` -> `Settings` -> `Cursor Settings` -> `Mcp`
 4. `Add new global MCP Server`
-5. This will drop you into an editor of the JSON config. Fill in a value for the key `salesforce-mcp-server`:
+5. This will drop you into an editor of the JSON config. Fill in a value for the key `salesforce-cli-mcp`:
 
     ```json
     {
         "mcpServers": {
-            "salesforce-mcp-server": {
+            "salesforce-cli-mcp": {
                 "command": "npx",
-                "args": ["@advanced-communities/salesforce-mcp-server"]
+                "args": ["salesforce-cli-mcp"]
             }
         }
     }
     ```
 
-    **With environment variables (optional):**
+    > If there are any existing keys under mcpServer, don't delete them. Add salesforce-cli-mcp to the end.
 
-    ```json
-    {
-        "mcpServers": {
-            "salesforce-mcp-server": {
-                "command": "npx",
-                "args": ["@advanced-communities/salesforce-mcp-server"],
-                "env": {
-                    "READ_ONLY": "true",
-                    "ALLOWED_ORGS": "production,staging"
-                }
-            }
-        }
-    }
-    ```
-
-    > If there are any existing keys under mcpServer, don't delete them. Add salesforce-mcp-server to the end.
-
-6. Save the file. Go back to the `Cursor Settings` tab. You should see salesforce-mcp-server listed and the dot should go green.
+6. Save the file. Go back to the `Cursor Settings` tab. You should see salesforce-cli-mcp listed and the dot should go green.
 7. Open `Composer` view and toggle from `normal` to `agent` (small text on bottom of input)
 8. You can now use tools
 
 ## Configuration
 
-The server supports the following environment variables for access control:
+### Project-Based Authentication
 
-- `READ_ONLY=true` - Prevents execution of Apex code (anonymous execution and tests)
-- `ALLOWED_ORGS=ALL` - Allow access to all orgs (default)
-- `ALLOWED_ORGS=org1,org2,org3` - Restrict access to specific org aliases
+Salesforce MCP Server v2.0 uses a **project-based authentication model**. This means:
 
-When ALLOWED_ORGS is set, the `list_connected_salesforce_orgs` tool will only show orgs that match the allowed list.
+- **No environment variables required** - The server uses your local Salesforce DX project configuration
+- **All tools require a `sourcePath` parameter** - This is the absolute path to your Salesforce DX project directory
+- **Uses `.sf/config.json`** - The server reads org authentication from your project's `.sf` directory
+- **Filesystem-based access control** - Access is controlled by file permissions on your project directory
 
-### Permission Examples
+### Requirements
 
-**Read-only access to all orgs:**
+For the server to work, you need:
 
-```json
-{
-    "mcpServers": {
-        "salesforce-mcp-server": {
-            "command": "npx",
-            "args": ["@advanced-communities/salesforce-mcp-server"],
-            "env": {
-                "READ_ONLY": "true"
-            }
-        }
-    }
-}
+1. **Valid Salesforce DX project structure** with a `.sf` directory
+2. **Authenticated org(s)** configured in your project (via `sf org login` or default org settings)
+3. **Salesforce CLI installed** and accessible in your PATH
+
+### Project Structure Example
+
+```
+/Users/yourname/sf-projects/my-salesforce-app/
+├── .sf/
+│   └── config.json          # Contains org configuration
+├── force-app/
+│   └── main/
+│       └── default/
+├── sfdx-project.json
+└── ...
 ```
 
-**Full access to specific orgs only:**
+When using tools, you'll provide the project path:
 
-```json
-{
-    "mcpServers": {
-        "salesforce-mcp-server": {
-            "command": "npx",
-            "args": ["@advanced-communities/salesforce-mcp-server"],
-            "env": {
-                "ALLOWED_ORGS": "dev,qa,staging"
-            }
-        }
-    }
-}
+```
+sourcePath: "/Users/yourname/sf-projects/my-salesforce-app"
 ```
 
-**Read-only access to specific orgs:**
+### Target Org Selection
 
-```json
-{
-    "mcpServers": {
-        "salesforce-mcp-server": {
-            "command": "npx",
-            "args": ["@advanced-communities/salesforce-mcp-server"],
-            "env": {
-                "READ_ONLY": "true",
-                "ALLOWED_ORGS": "production,prod-backup"
-            }
-        }
-    }
-}
+Most tools accept an optional `targetOrg` parameter:
+
+- **If provided**: Uses the specified org alias or username
+- **If omitted**: Uses the default org configured in your project's `.sf/config.json`
+
+This gives you flexibility to work with multiple orgs from the same project.
+
+### Authentication Setup
+
+Before using the MCP server, ensure your Salesforce DX project is properly configured:
+
+```bash
+# Navigate to your Salesforce DX project
+cd /path/to/your/salesforce-project
+
+# Login to your org (if not already authenticated)
+sf org login web --alias my-dev-org
+
+# Set as default org (optional)
+sf config set target-org my-dev-org
+
+# Verify authentication
+sf org list
 ```
 
-You can check the current permission settings using the `get_server_permissions` tool.
+Once authenticated, the MCP server will use this configuration when you provide the project path.
 
 ## How to use it
 
@@ -436,16 +362,7 @@ Authenticate and login to a Salesforce org via web browser.
 - "Login to a new production org with alias 'prod'"
 - "Connect to a sandbox with alias 'dev-sandbox'"
 
-#### 15. Get Server Permissions
-
-Check current server permission settings.
-
-**Example prompts:**
-
-- "Show me the current server permissions"
-- "What orgs am I allowed to access?"
-
-#### 16. Run Code Analyzer
+#### 15. Run Code Analyzer
 
 Analyze your code with configurable rules to ensure good coding practices.
 
@@ -455,7 +372,7 @@ Analyze your code with configurable rules to ensure good coding practices.
 - "Analyze my Lightning Web Components for security issues"
 - "Check PMD rules on the force-app directory"
 
-#### 17. List Code Analyzer Rules
+#### 16. List Code Analyzer Rules
 
 List available rules for code analysis.
 
@@ -465,7 +382,7 @@ List available rules for code analysis.
 - "List security-related code analysis rules"
 - "What ESLint rules are available?"
 
-#### 18. Scanner Run
+#### 17. Scanner Run
 
 Scan a codebase with various security and quality rules using multiple engines.
 
@@ -476,7 +393,7 @@ Scan a codebase with various security and quality rules using multiple engines.
 - "Check for retire-js vulnerabilities in my JavaScript files"
 - "Scan with high severity threshold and save results to CSV"
 
-#### 19. Scanner Run DFA
+#### 18. Scanner Run DFA
 
 Run Salesforce Graph Engine for data flow analysis to identify complex security issues.
 
@@ -487,7 +404,7 @@ Run Salesforce Graph Engine for data flow analysis to identify complex security 
 - "Perform path-based security analysis on all Apex classes"
 - "Run DFA with pilot rules enabled"
 
-#### 20. Assign Permission Set
+#### 19. Assign Permission Set
 
 Assign permission sets to one or more org users.
 
@@ -497,7 +414,7 @@ Assign permission sets to one or more org users.
 - "Grant CloudHouse and AppBuilder permission sets to user@example.com"
 - "Assign multiple permission sets to a list of users in sandbox"
 
-#### 21. Assign Permission Set License
+#### 20. Assign Permission Set License
 
 Assign permission set licenses to org users.
 
@@ -507,7 +424,7 @@ Assign permission set licenses to org users.
 - "Grant Service Cloud permission set license to multiple users"
 - "Assign Platform Event license to the admin user"
 
-#### 22. Display User
+#### 21. Display User
 
 Display information about a Salesforce user including profile, org ID, and access details.
 
@@ -517,7 +434,7 @@ Display information about a Salesforce user including profile, org ID, and acces
 - "Display user details for user@example.com"
 - "Get the profile and access token for the current user"
 
-#### 23. List Metadata
+#### 22. List Metadata
 
 List metadata components and properties of a specified type.
 
@@ -528,7 +445,7 @@ List metadata components and properties of a specified type.
 - "Get all EmailTemplate metadata with API version 60.0"
 - "List Layout components and save to a file"
 
-#### 24. List Metadata Types
+#### 23. List Metadata Types
 
 Display details about all metadata types enabled for your org.
 
@@ -539,7 +456,7 @@ Display details about all metadata types enabled for your org.
 - "Get all enabled metadata types with API version 60.0"
 - "Display metadata types and save to file for reference"
 
-#### 25. Logout
+#### 24. Logout
 
 Log out of a Salesforce org, removing stored authentication.
 
@@ -549,7 +466,7 @@ Log out of a Salesforce org, removing stored authentication.
 - "Remove authentication for sandbox1"
 - "Logout from all connected orgs"
 
-#### 26. Open
+#### 25. Open
 
 Open a Salesforce org in your browser.
 
@@ -561,7 +478,7 @@ Open a Salesforce org in your browser.
 - "Open a Visualforce page /apex/MyPage in production"
 - "Open my FlexiPage in Lightning App Builder"
 
-#### 27. Open Record
+#### 26. Open Record
 
 Open a specific Salesforce record in the browser.
 
@@ -571,7 +488,7 @@ Open a specific Salesforce record in the browser.
 - "Navigate to Account record 001... in production"
 - "Show me the Contact record 003... in the browser"
 
-#### 28. Create Record
+#### 27. Create Record
 
 Create a new record in a Salesforce org using the REST API.
 
@@ -582,7 +499,7 @@ Create a new record in a Salesforce org using the REST API.
 - "Create a Case with Subject 'Technical Issue' and Priority 'High'"
 - "Add a new Lead with Company 'Tech Startup' and Email 'lead@example.com'"
 
-#### 29. Update Record
+#### 28. Update Record
 
 Update an existing record in a Salesforce org using the REST API.
 
@@ -593,7 +510,7 @@ Update an existing record in a Salesforce org using the REST API.
 - "Update Contact 003XX... with Phone '(555) 123-4567'"
 - "Modify Case 500XX... to set Priority to 'Critical'"
 
-#### 30. Delete Record
+#### 29. Delete Record
 
 Delete a record from a Salesforce org using the REST API.
 
@@ -604,7 +521,7 @@ Delete a record from a Salesforce org using the REST API.
 - "Delete Lead record 00QXX..."
 - "Remove the test Case record 500XX..."
 
-#### 31. Package Install
+#### 30. Package Install
 
 Install or upgrade a package version in a Salesforce org.
 
@@ -616,7 +533,7 @@ Install or upgrade a package version in a Salesforce org.
 - "Install package and compile only package Apex code"
 - "Upgrade unlocked package and deprecate removed components"
 
-#### 32. Package Uninstall
+#### 31. Package Uninstall
 
 Uninstall a second-generation package from a Salesforce org.
 
@@ -627,7 +544,7 @@ Uninstall a second-generation package from a Salesforce org.
 - "Uninstall package and wait 5 minutes for completion"
 - "Remove package with spaces in alias from sandbox"
 
-#### 33. Schema Generate Tab
+#### 32. Schema Generate Tab
 
 Generate metadata source files for a new custom tab on a custom object.
 
@@ -638,7 +555,7 @@ Generate metadata source files for a new custom tab on a custom object.
 - "Add a navigation tab for Customer\_\_c with icon 75 in force-app/main/default/tabs"
 - "Create a tab for Product\_\_c custom object with default icon"
 
-#### 34. Search Records
+#### 33. Search Records
 
 Execute SOSL text-based searches across multiple objects. This is the primary tool for finding records that mention or contain specific text across your Salesforce org.
 
@@ -650,7 +567,7 @@ Execute SOSL text-based searches across multiple objects. This is the primary to
 - "Find all records mentioning our competitor 'Acme Corp' across Accounts, Opportunities, and Cases"
 - "Execute SOSL: FIND {Smith} IN ALL FIELDS RETURNING Contact, Lead"
 
-#### 35. Generate Lightning Component
+#### 34. Generate Lightning Component
 
 Generate Lightning Web Components (LWC) or Aura components with configurable templates and output directories.
 
@@ -661,7 +578,7 @@ Generate Lightning Web Components (LWC) or Aura components with configurable tem
 - "Generate an LWC with analyticsDashboard template called SalesMetrics"
 - "Create a Lightning component MyCustomView with default template"
 
-#### 36. Deploy Metadata to Org
+#### 35. Deploy Metadata to Org
 
 Deploy metadata components to a Salesforce org with various configuration options including test execution.
 
@@ -709,29 +626,75 @@ AI: [Provides detailed object metadata]
 
 ### Tips for Best Results
 
-1. **Specify the Target Org**: Always mention which org you want to work with (e.g., "in my dev org", "using production")
+1. **Provide Your Project Path**: When working with the AI assistant, mention your Salesforce DX project directory:
+    - "Use my Salesforce project at /Users/myname/sfdx-projects/my-app"
+    - "Working with the project in ~/workspace/salesforce-app"
+    - The AI will use this path for all subsequent tool calls
 
-2. **Be Specific with Queries**: Provide field names and conditions for SOQL queries
+2. **Specify the Target Org** (Optional): Mention which org alias to use, or rely on the project's default org:
+    - "Query Accounts from my dev-sandbox org"
+    - "Run tests in the production org"
+    - If omitted, uses the project's default org configuration
+
+3. **Be Specific with Queries**: Provide field names and conditions for SOQL queries
     - Good: "Query Account records with Type = 'Customer' and show Id, Name, and CreatedDate"
     - Less specific: "Get some Accounts"
 
-3. **Object Names**: You can use either user-friendly names or API names - the AI assistant will use the describe tools to find the correct API names
+4. **Object Names**: You can use either user-friendly names or API names - the AI assistant will use the describe tools to find the correct API names
     - Both work: "Query Custom Object records" or "Query Custom_Object\_\_c records"
     - The assistant will automatically resolve field names too
 
-4. **Apex Code Formatting**: When providing Apex code, you can use code blocks or inline code
+5. **Apex Code Formatting**: When providing Apex code, you can use code blocks or inline code
 
-5. **File Exports**: Specify the format (CSV or JSON) when exporting query results
+6. **File Exports**: Specify the format (CSV or JSON) when exporting query results
 
 ### Troubleshooting
 
-**"No orgs found"**: Make sure you have authenticated orgs using `sf org login`
+#### Project Path Issues
 
-**"Object not found"**: Verify the object exists and you're using the correct API name
+**"Path does not exist"** or **"Not a directory"**:
+- Verify the path is correct and absolute (e.g., `/Users/name/projects/my-sf-app`, not `~/projects/my-sf-app`)
+- Ensure you have read permissions on the directory
+- Check for typos in the path
 
-**"Query error"**: Check your SOQL syntax and field names
+**".sf directory not found"**:
+- Your project must have a `.sf` directory with `config.json`
+- Run `sf org list` in your project directory to initialize the `.sf` directory
+- Ensure you're pointing to the project root, not a subdirectory
 
-**"Apex execution failed"**: Review the debug logs for specific error messages
+**"Path is empty"**:
+- The `sourcePath` parameter is required for most tools
+- Provide the absolute path to your Salesforce DX project directory
+
+#### Authentication Issues
+
+**"No authenticated org found"** or **"No orgs found"**:
+- Run `sf org login web` in your project directory to authenticate
+- Verify authentication with `sf org list`
+- Check that your access token hasn't expired
+
+**"Expired access/refresh token"**:
+- Re-authenticate: `sf org login web --alias my-org`
+- Some orgs require periodic re-authentication
+
+#### General Issues
+
+**"Object not found"**:
+- Verify the object exists and you're using the correct API name
+- Use the `sobject_list` tool to see all available objects
+
+**"Query error"**:
+- Check your SOQL syntax and field names
+- Use the `sobject_describe` tool to see available fields
+
+**"Apex execution failed"**:
+- Review the debug logs for specific error messages
+- Ensure you have appropriate permissions in the org
+
+**"Command not found: sf"**:
+- Install Salesforce CLI: https://developer.salesforce.com/tools/salesforcecli
+- Ensure `sf` is in your system PATH
+- Restart your AI client after installing the CLI
 
 ### Security Considerations
 
@@ -744,10 +707,8 @@ AI: [Provides detailed object metadata]
 
 If you want to build the Desktop Extension file yourself:
 
-1. Clone the repository and navigate to the `salesforce-mcp-server` directory
+1. Clone the repository and navigate to the `salesforce-cli-mcp` directory
 2. Install dependencies: `npm install`
 3. Build the DXT file: `npm run build:dxt`
 4. The `.dxt` file will be created in the `dist/` directory
 5. Share this file with others for easy one-click installation
-
-For more details about Desktop Extensions, see [DXT.md](./DXT.md)

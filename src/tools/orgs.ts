@@ -1,6 +1,5 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { listAllOrgs } from "../shared/connection.js";
-import { permissions } from "../config/permissions.js";
 import { executeSfCommand } from "../utils/sfCommand.js";
 import z from "zod";
 
@@ -11,30 +10,12 @@ import z from "zod";
 const listConnectedSalesforceOrgs = async () => {
     const orgs = await listAllOrgs();
 
-    // Filter orgs based on ALLOWED_ORGS
-    const allowedOrgs = permissions.getAllowedOrgs();
-    const filteredOrgs =
-        allowedOrgs === "ALL"
-            ? orgs
-            : orgs.filter((org) => {
-                  // Check if org username or any alias is in allowed list
-                  if (permissions.isOrgAllowed(org.username)) return true;
-                  if (org.aliases) {
-                      return org.aliases.some((alias) =>
-                          permissions.isOrgAllowed(alias)
-                      );
-                  }
-                  return false;
-              });
-
-    const scratchOrgs = filteredOrgs.filter(
-        (org) => !org.isDevHub && org.orgId
-    );
-    const devHubOrgs = filteredOrgs.filter((org) => org.isDevHub);
-    const sandboxes = filteredOrgs.filter(
+    const scratchOrgs = orgs.filter((org) => !org.isDevHub && org.orgId);
+    const devHubOrgs = orgs.filter((org) => org.isDevHub);
+    const sandboxes = orgs.filter(
         (org) => !org.isDevHub && org.instanceUrl?.includes(".sandbox.")
     );
-    const production = filteredOrgs.filter(
+    const production = orgs.filter(
         (org) =>
             !org.isDevHub &&
             !org.instanceUrl?.includes(".sandbox.") &&
@@ -47,11 +28,7 @@ const listConnectedSalesforceOrgs = async () => {
             production,
             sandboxes,
             scratchOrgs,
-            totalOrgs: filteredOrgs.length,
-            permissionMessage:
-                allowedOrgs === "ALL"
-                    ? undefined
-                    : `Showing only allowed orgs: ${allowedOrgs.join(", ")}`,
+            totalOrgs: orgs.length,
         },
     };
 };
@@ -330,21 +307,6 @@ export const registerOrgTools = (server: McpServer) => {
         async ({ input }) => {
             const { targetOrg, permissionSetNames, onBehalfOf } = input;
 
-            if (permissions.isReadOnly()) {
-                return {
-                    content: [
-                        {
-                            type: "text",
-                            text: JSON.stringify({
-                                success: false,
-                                message:
-                                    "Cannot assign permission sets in read-only mode",
-                            }),
-                        },
-                    ],
-                };
-            }
-
             if (!targetOrg || targetOrg.trim() === "") {
                 return {
                     content: [
@@ -353,20 +315,6 @@ export const registerOrgTools = (server: McpServer) => {
                             text: JSON.stringify({
                                 success: false,
                                 message: "Target org is required",
-                            }),
-                        },
-                    ],
-                };
-            }
-
-            if (!permissions.isOrgAllowed(targetOrg)) {
-                return {
-                    content: [
-                        {
-                            type: "text",
-                            text: JSON.stringify({
-                                success: false,
-                                message: `Access to org '${targetOrg}' is not allowed`,
                             }),
                         },
                     ],
@@ -429,21 +377,6 @@ export const registerOrgTools = (server: McpServer) => {
         async ({ input }) => {
             const { targetOrg, licenseNames, onBehalfOf } = input;
 
-            if (permissions.isReadOnly()) {
-                return {
-                    content: [
-                        {
-                            type: "text",
-                            text: JSON.stringify({
-                                success: false,
-                                message:
-                                    "Cannot assign permission set licenses in read-only mode",
-                            }),
-                        },
-                    ],
-                };
-            }
-
             if (!targetOrg || targetOrg.trim() === "") {
                 return {
                     content: [
@@ -452,20 +385,6 @@ export const registerOrgTools = (server: McpServer) => {
                             text: JSON.stringify({
                                 success: false,
                                 message: "Target org is required",
-                            }),
-                        },
-                    ],
-                };
-            }
-
-            if (!permissions.isOrgAllowed(targetOrg)) {
-                return {
-                    content: [
-                        {
-                            type: "text",
-                            text: JSON.stringify({
-                                success: false,
-                                message: `Access to org '${targetOrg}' is not allowed`,
                             }),
                         },
                     ],
@@ -532,20 +451,6 @@ export const registerOrgTools = (server: McpServer) => {
                 };
             }
 
-            if (!permissions.isOrgAllowed(targetOrg)) {
-                return {
-                    content: [
-                        {
-                            type: "text",
-                            text: JSON.stringify({
-                                success: false,
-                                message: `Access to org '${targetOrg}' is not allowed`,
-                            }),
-                        },
-                    ],
-                };
-            }
-
             const result = await displayUserInfo(targetOrg);
             return {
                 content: [
@@ -605,20 +510,6 @@ export const registerOrgTools = (server: McpServer) => {
                             text: JSON.stringify({
                                 success: false,
                                 message: "Target org is required",
-                            }),
-                        },
-                    ],
-                };
-            }
-
-            if (!permissions.isOrgAllowed(targetOrg)) {
-                return {
-                    content: [
-                        {
-                            type: "text",
-                            text: JSON.stringify({
-                                success: false,
-                                message: `Access to org '${targetOrg}' is not allowed`,
                             }),
                         },
                     ],
@@ -698,20 +589,6 @@ export const registerOrgTools = (server: McpServer) => {
                 };
             }
 
-            if (!permissions.isOrgAllowed(targetOrg)) {
-                return {
-                    content: [
-                        {
-                            type: "text",
-                            text: JSON.stringify({
-                                success: false,
-                                message: `Access to org '${targetOrg}' is not allowed`,
-                            }),
-                        },
-                    ],
-                };
-            }
-
             const result = await listMetadataTypes(
                 targetOrg,
                 apiVersion,
@@ -750,21 +627,6 @@ export const registerOrgTools = (server: McpServer) => {
         async ({ input }) => {
             const { targetOrg, all } = input;
 
-            if (permissions.isReadOnly()) {
-                return {
-                    content: [
-                        {
-                            type: "text",
-                            text: JSON.stringify({
-                                success: false,
-                                message:
-                                    "Cannot logout from orgs in read-only mode",
-                            }),
-                        },
-                    ],
-                };
-            }
-
             if (!targetOrg && !all) {
                 return {
                     content: [
@@ -789,35 +651,6 @@ export const registerOrgTools = (server: McpServer) => {
                                 success: false,
                                 message:
                                     "Cannot specify both targetOrg and all",
-                            }),
-                        },
-                    ],
-                };
-            }
-
-            if (targetOrg && !permissions.isOrgAllowed(targetOrg)) {
-                return {
-                    content: [
-                        {
-                            type: "text",
-                            text: JSON.stringify({
-                                success: false,
-                                message: `Access to org '${targetOrg}' is not allowed`,
-                            }),
-                        },
-                    ],
-                };
-            }
-
-            if (all && permissions.getAllowedOrgs() !== "ALL") {
-                return {
-                    content: [
-                        {
-                            type: "text",
-                            text: JSON.stringify({
-                                success: false,
-                                message:
-                                    "Cannot logout from all orgs when ALLOWED_ORGS is restricted",
                             }),
                         },
                     ],
@@ -881,20 +714,6 @@ export const registerOrgTools = (server: McpServer) => {
                             text: JSON.stringify({
                                 success: false,
                                 message: "Target org is required",
-                            }),
-                        },
-                    ],
-                };
-            }
-
-            if (!permissions.isOrgAllowed(targetOrg)) {
-                return {
-                    content: [
-                        {
-                            type: "text",
-                            text: JSON.stringify({
-                                success: false,
-                                message: `Access to org '${targetOrg}' is not allowed`,
                             }),
                         },
                     ],
