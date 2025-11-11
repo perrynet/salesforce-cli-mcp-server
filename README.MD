@@ -6,7 +6,7 @@
 
 Salesforce CLI MCP Server v2.0 is a Model Context Protocol (MCP) server that enables AI assistants to interact with Salesforce organizations through project-based CLI integration. It provides tools that allow AI models to execute Apex code, query data, describe objects, and manage Salesforce orgs using your local Salesforce DX project configurations.
 
-**Note**: This is a local MCP server that runs from your repository. It is not distributed via NPM.
+**Note**: This is a local MCP server that runs from your repository. It is not distributed via NPM. *Works on Mac, not verified on Windows/Linux yet!
 
 ### Installation
 
@@ -702,13 +702,3 @@ AI: [Provides detailed object metadata]
 - Be cautious when executing DML operations in production orgs
 - Review Apex code before execution, especially in production environments
 - Consider using sandbox orgs for testing and development
-
-### Building Desktop Extension (DXT) Locally
-
-If you want to build the Desktop Extension file yourself:
-
-1. Clone the repository and navigate to the `salesforce-cli-mcp` directory
-2. Install dependencies: `npm install`
-3. Build the DXT file: `npm run build:dxt`
-4. The `.dxt` file will be created in the `dist/` directory
-5. Share this file with others for easy one-click installation
