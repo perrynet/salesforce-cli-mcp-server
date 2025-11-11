@@ -1,10 +1,10 @@
-# Salesforce MCP Server
+# Salesforce CLI MCP Server
 
-[![License](https://img.shields.io/badge/license-MIT-green)](https://github.com/advancedcommunities/salesforce-mcp-server/blob/main/LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-green)](https://github.com/perrynet/salesforce-cli-mcp-server/blob/main/LICENSE)
 
 ## What is it
 
-Salesforce MCP Server v2.0 is a Model Context Protocol (MCP) server that enables AI assistants to interact with Salesforce organizations through project-based CLI integration. It provides tools that allow AI models to execute Apex code, query data, describe objects, and manage Salesforce orgs using your local Salesforce DX project configurations.
+Salesforce CLI MCP Server v2.0 is a Model Context Protocol (MCP) server that enables AI assistants to interact with Salesforce organizations through project-based CLI integration. It provides tools that allow AI models to execute Apex code, query data, describe objects, and manage Salesforce orgs using your local Salesforce DX project configurations.
 
 **Note**: This is a local MCP server that runs from your repository. It is not distributed via NPM.
 
@@ -21,8 +21,8 @@ Salesforce MCP Server v2.0 is a Model Context Protocol (MCP) server that enables
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/advancedcommunities/salesforce-mcp-server.git
-   cd salesforce-mcp-server
+   git clone https://github.com/perrynet/salesforce-cli-mcp-server.git
+   cd salesforce-cli-mcp-server
    ```
 
 2. Install dependencies and build:
