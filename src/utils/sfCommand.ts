@@ -352,6 +352,29 @@ export function executeSfCommandInProjectRaw(
               resolve(stdout);
               return;
             }
+
+            // Check if stdout contains JSON error details (SF CLI with --json flag)
+            if (stdout && command.includes("--json")) {
+              try {
+                const jsonResult = JSON.parse(stdout);
+                if (jsonResult.status === 1 || jsonResult.exitCode === 1) {
+                  // SF CLI returned an error in JSON format
+                  const errorMessage =
+                    jsonResult.message || jsonResult.name || "Command failed";
+                  const actions = jsonResult.actions
+                    ? `\nSuggested actions:\n${jsonResult.actions.join("\n")}`
+                    : "";
+                  const stack = jsonResult.stack
+                    ? `\nStack trace:\n${jsonResult.stack}`
+                    : "";
+                  reject(new Error(`${errorMessage}${actions}${stack}`));
+                  return;
+                }
+              } catch (parseError) {
+                // If JSON parsing fails, fall through to default error handling
+              }
+            }
+
             reject(error);
           }
           return;

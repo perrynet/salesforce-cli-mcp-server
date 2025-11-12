@@ -10,20 +10,19 @@ const executeSoslQuery = async (
   sourcePath: string,
   targetOrg?: string,
   query?: string,
-  file?: string,
-  resultFormat: string = "json"
+  file?: string
 ) => {
   let sfCommand: string;
 
   if (query) {
     sfCommand = buildSfCommand(
-      `sf data search --query "${query}" --result-format ${resultFormat}`,
+      `sf data search --query "${query}"`,
       targetOrg,
       sourcePath
     );
   } else if (file) {
     sfCommand = buildSfCommand(
-      `sf data search --file "${file}" --result-format ${resultFormat}`,
+      `sf data search --file "${file}"`,
       targetOrg,
       sourcePath
     );
@@ -34,23 +33,11 @@ const executeSoslQuery = async (
   try {
     const result = await executeSfCommandInProjectRaw(sfCommand, sourcePath);
 
-    if (resultFormat === "json") {
-      try {
-        return JSON.parse(result);
-      } catch (parseError) {
-        return { searchRecords: [], rawOutput: result };
-      }
+    try {
+      return JSON.parse(result);
+    } catch (parseError) {
+      return { searchRecords: [], rawOutput: result };
     }
-
-    if (resultFormat === "csv") {
-      return {
-        success: true,
-        message: "Results written to CSV files",
-        output: result,
-      };
-    }
-
-    return { output: result };
   } catch (error) {
     throw error;
   }
@@ -84,13 +71,6 @@ export const registerSearchTools = (server: McpServer) => {
             .describe(
               "Username or alias of the target org (optional - uses default org from project if not provided)"
             ),
-          resultFormat: z
-            .enum(["human", "csv", "json"])
-            .optional()
-            .default("json")
-            .describe(
-              "Format to display the results. 'csv' writes to disk, 'human' and 'json' display to terminal"
-            ),
         })
         .refine(
           (data) => !!(data.query || data.file) && !(data.query && data.file),
@@ -100,15 +80,14 @@ export const registerSearchTools = (server: McpServer) => {
         ),
     },
     async ({ input }) => {
-      const { sourcePath, query, file, targetOrg, resultFormat } = input;
+      const { sourcePath, query, file, targetOrg } = input;
 
       try {
         const result = await executeSoslQuery(
           sourcePath,
           targetOrg,
           query,
-          file,
-          resultFormat
+          file
         );
 
         return {
